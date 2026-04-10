@@ -93,7 +93,7 @@ def load_huggingface_component(guess, component_name, lib_name, cls_name, repo_p
                 _vae_config = _IAEKL.load_config(config_path)
                 if _vae_config.get("latent_channels", 4) == 16:
                     logger.info("VAE not found in checkpoint. Downloading Flux VAE from HuggingFace...")
-                    state_dict = _download_hf_state_dict("black-forest-labs/FLUX.1-schnell", subfolder="vae")
+                    state_dict = _download_hf_state_dict("Comfy-Org/flux1-schnell", subfolder="vae")
                 else:
                     raise AssertionError("You do not have VAE state dict! Please provide a VAE as an additional module.")
             from backend.nn.vae import IntegratedAutoencoderKL
