@@ -761,6 +761,40 @@ def _load_diffuser(path: os.PathLike):
     return sd, metadata, guess
 
 
+TEXT_ENCODER_NAMES = {
+    "clip_l": "CLIP-L",
+    "clip_g": "CLIP-G",
+    "t5xxl": "T5-XXL",
+    "umt5xxl": "UMT5-XXL",
+    "gemma2_2b": "Gemma2-2B",
+    "ministral3_3b": "Ministral3-3B",
+    "qwen25_7b": "Qwen2.5-VL-7B",
+    "qwen3_06b": "Qwen3-0.6B",
+    "qwen3_4b": "Qwen3-4B",
+    "qwen3_8b": "Qwen3-8B",
+    "qwen3vl_4b": "Qwen3-VL-4B",
+}
+
+
+def validate_text_encoders(state_dict: dict[str, dict], leftover: dict[str, torch.Tensor], guess):
+    """Fail early, and legibly, when a required text encoder was not supplied"""
+
+    for prefix, target in guess.clip_target.items():
+        if len(state_dict.get(target) or {}) > 16:
+            continue
+
+        wanted = prefix.split(".")[0]
+        found = sorted({k.split(".")[0] for k in leftover})
+
+        message = f'Missing text encoder for "{guess.huggingface_repo}": expected {TEXT_ENCODER_NAMES.get(wanted, wanted)} ("{wanted}")'
+        if found:
+            supplied = ", ".join(f'{TEXT_ENCODER_NAMES.get(f, f)} ("{f}")' for f in found)
+            message += f"; the additional module(s) you selected only provide: {supplied}"
+        message += ". Select the correct text encoder file in the \"VAE / Text Encoder\" field."
+
+        raise ValueError(message)
+
+
 def split_state_dict(path: os.PathLike, additional_state_dicts: list[os.PathLike] = None):
     try:
         sd, metadata, guess = _load_unet(path)
@@ -801,6 +835,8 @@ def split_state_dict(path: os.PathLike, additional_state_dicts: list[os.PathLike
 
     for k, v in guess.clip_target.items():
         state_dict[v] = try_filter_state_dict(sd, [k + "."])
+
+    validate_text_encoders(state_dict, sd, guess)
 
     state_dict["ignore"] = sd
 
